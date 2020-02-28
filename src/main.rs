@@ -10,8 +10,7 @@ mod in_sight;
 
 const URI: &str = "https://api.nasa.gov/insight_weather/?api_key=DEMO_KEY&feedtype=json&ver=1.0";
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let connection_string = match env::var("MONGODB_URI") {
         Ok(connection_string) => connection_string,
         Err(e) => {
@@ -25,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let raw_responses = db.collection("raw_responses");
     let valid_sols = db.collection("valid_sols");
 
-    let resp = reqwest::get(URI).await?.text().await?;
+    let resp = reqwest::blocking::get(URI)?.text()?;
     
     // connect to db, write earliest date
     raw_responses.insert_one(
@@ -35,6 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         },
         None,
     )?;
+
     let in_sight_response: InSight = serde_json::from_str(&resp)?;
     let earliest_valid_sol_date = in_sight_response
         .earliest_valid_sol_date()
