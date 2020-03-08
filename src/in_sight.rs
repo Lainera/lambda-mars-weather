@@ -1,5 +1,6 @@
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 
 /// This module handles InSight request parsing
@@ -13,13 +14,20 @@ pub struct InSight {
     /// except sol_keys and validity checks into 'sols' HashMap
     /// Serializing InSight with sols populated would flatten it back
     #[serde(flatten)]
-    sols: HashMap<String, InSightSol>,
+    sols: HashMap<String, Value>,
 }
 
 impl InSight {
-    pub fn earliest_valid_sol(&self) -> Option<&InSightSol> {
+    pub fn earliest_valid_sol(mut self) -> Option<Sol> {
         self.earliest_valid_sol_date()
-            .and_then(|date| self.sols.get(&date))
+            .and_then(|date| {
+                //remove_entry kindly returns owned (k, v)
+                if let Some((date, earliest_valid_sol)) = self.sols.remove_entry(&date) {
+                    Some(Sol::from((date, earliest_valid_sol)))
+                } else {
+                    None
+                }
+            })
     }
 
     pub fn valid_sols(&self) -> Vec<&String> {
@@ -45,30 +53,48 @@ impl InSight {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct InSightSol {
-    /// deserializing Sol would convert raw "AT" key into "temperature"
-    /// same could be done by passing in rename(serialzie)
-    /// or using both at the same time
-    #[serde(rename(deserialize = "AT"))]
-    temperature: InSightTemperature,
-    #[serde(rename(deserialize = "WD"))]
-    wind_direction: HashMap<String, InSightWindDirection>,
-    #[serde(rename(deserialize = "PRE"))]
-    pressure: InSightPressure,
-    #[serde(rename(deserialize = "HWS"))]
-    horizontal_wind_speed: InSightWindSpeed,
-    /// chrono works with serde out of the box, I just need to specify
-    /// correct date format
-    #[serde(rename(deserialize = "First_UTC"))]
+pub struct Sol {
+    sol_date: String,
+    temperature: SolTemperature,
+    wind_direction: HashMap<String, SolWindDirection>,
+    pressure: SolPressure,
+    horizontal_wind_speed: SolWindSpeed,
     start_utc: DateTime<Utc>,
-    #[serde(rename(deserialize = "Last_UTC"))]
     end_utc: DateTime<Utc>,
-    #[serde(rename(deserialize = "Season"))]
     season: String,
 }
 
+impl From<(String, Value)> for Sol {
+    fn from((sol_date, mut value): (String, Value)) -> Self {
+        let temperature: SolTemperature =
+            serde_json::from_value(value["AT"].take()).expect("Failed to parse temperature");
+        let wind_direction: HashMap<String, SolWindDirection> =
+            serde_json::from_value(value["WD"].take()).expect("Failed to parse wind direction");
+        let pressure: SolPressure =
+            serde_json::from_value(value["PRE"].take()).expect("Failed to parse pressure");
+        let horizontal_wind_speed: SolWindSpeed =
+            serde_json::from_value(value["HWS"].take()).expect("Failed to parse wind speed");
+        let start_utc: DateTime<Utc> =
+            serde_json::from_value(value["First_UTC"].take()).expect("Failed to parse start date");
+        let end_utc: DateTime<Utc> =
+            serde_json::from_value(value["Last_UTC"].take()).expect("Failed to parse end date");
+        let season: String =
+            serde_json::from_value(value["Season"].take()).expect("Failed to parse season");
+        Sol {
+            sol_date,
+            temperature,
+            wind_direction,
+            pressure,
+            horizontal_wind_speed,
+            start_utc,
+            end_utc,
+            season,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
-struct InSightMeasurements {
+struct SolMeasurements {
     #[serde(rename(deserialize = "av"))]
     average: f64,
     #[serde(rename(deserialize = "mn"))]
@@ -79,11 +105,12 @@ struct InSightMeasurements {
     sample_count: i32,
 }
 // exactly the same fields, can type alias
-type InSightWindSpeed = InSightMeasurements;
-type InSightTemperature = InSightMeasurements;
-type InSightPressure = InSightMeasurements;
+type SolWindSpeed = SolMeasurements;
+type SolTemperature = SolMeasurements;
+type SolPressure = SolMeasurements;
+
 #[derive(Serialize, Deserialize, Debug)]
-struct InSightWindDirection {
+struct SolWindDirection {
     compass_degrees: f32,
     compass_point: String,
     compass_right: f64,
