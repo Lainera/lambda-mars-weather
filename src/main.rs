@@ -1,13 +1,13 @@
 use bson::{bson, doc};
 use chrono::prelude::*;
-use mongodb::{options::ReplaceOptions, Client};
-use reqwest;
-use std::env;
 use lambda_runtime::{error::HandlerError, lambda, Context};
 use log;
-use serde::{Deserialize, Serialize};
+use mongodb::{options::ReplaceOptions, Client};
+use reqwest;
+use serde::{Serialize};
 use serde_json::Value;
 use simple_logger;
+use std::env;
 //locals
 use in_sight::*;
 
@@ -21,21 +21,21 @@ struct Outcome {
 const URI: &str = "https://api.nasa.gov/insight_weather/?api_key=DEMO_KEY&feedtype=json&ver=1.0";
 
 fn fetch_and_store() -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-   let connection_string = match env::var("MONGODB_URI") {
-       Ok(connection_string) => connection_string,
-       Err(e) => {
-           println!("Failed to get MONGODB_URI environment variable \n {}; \n Using mongodb://localhost:27018", e);
-           String::from("mongodb://localhost:27018")
-       }
-   };
-       
-   let client = Client::with_uri_str(&connection_string)?;
-   let db = client.database("mars_weather");
-   let raw_responses = db.collection("raw_responses");
-   let valid_sols = db.collection("valid_sols");
+    let connection_string = match env::var("MONGODB_URI") {
+        Ok(connection_string) => connection_string,
+        Err(e) => {
+            println!("Failed to get MONGODB_URI environment variable \n {}; \n Using mongodb://localhost:27018", e);
+            String::from("mongodb://localhost:27018")
+        }
+    };
 
-   let resp = reqwest::blocking::get(URI)?.text()?;
-    
+    let client = Client::with_uri_str(&connection_string)?;
+    let db = client.database("mars_weather");
+    let raw_responses = db.collection("raw_responses");
+    let valid_sols = db.collection("valid_sols");
+
+    let resp = reqwest::blocking::get(URI)?.text()?;
+
     // connect to db, write earliest date
     raw_responses.insert_one(
         doc! {
@@ -50,16 +50,14 @@ fn fetch_and_store() -> Result<String, Box<dyn std::error::Error + Send + Sync>>
         .earliest_valid_sol_date()
         .expect("Failed to obtain earliest valid Sol date");
 
-    let mut sol = bson::to_bson(
-        in_sight_response
+    let sol = bson::to_bson(
+        &in_sight_response
             .earliest_valid_sol()
             .expect("Failed to obtain earliest valid Sol"),
     )?
     .as_document()
     .expect("Failed to convert to BSON document")
     .clone();
-
-    sol.insert("sol_date", earliest_valid_sol_date.clone());
 
     valid_sols.replace_one(
         doc! {
@@ -75,7 +73,7 @@ fn fetch_and_store() -> Result<String, Box<dyn std::error::Error + Send + Sync>>
 fn handler(_: Value, _: Context) -> Result<Outcome, HandlerError> {
     match fetch_and_store() {
         Ok(earliest_valid_sol_date) => Ok(Outcome {
-                message: format!("Successfully stored {}", earliest_valid_sol_date),
+            message: format!("Successfully stored {}", earliest_valid_sol_date),
         }),
         Err(error) => {
             log::error!("Failed to store sol data: {}", error);
