@@ -36,7 +36,6 @@ fn fetch_and_store() -> Result<String, Box<dyn std::error::Error + Send + Sync>>
 
     let resp = reqwest::blocking::get(URI)?.text()?;
 
-    // connect to db, write earliest date
     raw_responses.insert_one(
         doc! {
             "createdAt": Utc::now().timestamp().to_string(),

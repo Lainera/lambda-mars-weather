@@ -11,7 +11,7 @@ Using NASA's InSight API for collecting daily weather updates from Mars. API doc
 
 ## Infrastructure setup
 
-<img src="./assets/infra.png" />
+<img src="./assets/infra.png?raw=true" />
 
 - Lambda function, ran on a schedule 
 - EC2 running AMI with baked MongoDB
@@ -19,7 +19,7 @@ Using NASA's InSight API for collecting daily weather updates from Mars. API doc
 
 ## Why?
 
-- Because I can
+- Why not? 
 - Was curious about non-standard lambda environments
 - Wanted to check out Rust new mongo driver
 
