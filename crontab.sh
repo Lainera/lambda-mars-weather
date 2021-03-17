@@ -1,6 +1,6 @@
 #!/bin/sh
 
-printenv | grep MONGO_URI >> /etc/environment
+printenv | grep MONGODB_URI >> /etc/environment
 
 cat<<EOF > /etc/cron.d/crontab
 MAILTO=""
