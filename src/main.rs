@@ -1,11 +1,21 @@
-use bson::{bson, doc};
+use bson::doc;
 use chrono::prelude::*;
+
+#[cfg(feature = "lambda")]
 use lambda_runtime::{error::HandlerError, lambda, Context};
-use log;
-use mongodb::{options::ReplaceOptions, Client};
-use reqwest;
-use serde::{Serialize};
+
+#[cfg(feature = "lambda")]
 use serde_json::Value;
+
+use log;
+
+use mongodb::{
+    options::ReplaceOptions,
+    sync::Client,
+};
+
+use reqwest;
+use serde::Serialize;
 use simple_logger;
 use std::env;
 //locals
@@ -19,13 +29,14 @@ struct Outcome {
 }
 
 const URI: &str = "https://api.nasa.gov/insight_weather/?api_key=DEMO_KEY&feedtype=json&ver=1.0";
+const MONGO_DEFAULT_URI: &str = "mongodb://localhost:27017";
 
 fn fetch_and_store() -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let connection_string = match env::var("MONGODB_URI") {
         Ok(connection_string) => connection_string,
         Err(e) => {
-            println!("Failed to get MONGODB_URI environment variable \n {}; \n Using mongodb://localhost:27018", e);
-            String::from("mongodb://localhost:27018")
+            println!("Failed to get MONGODB_URI environment variable \n {}; \n Using {}", e, MONGO_DEFAULT_URI);
+            MONGO_DEFAULT_URI.to_owned()
         }
     };
 
@@ -43,8 +54,9 @@ fn fetch_and_store() -> Result<String, Box<dyn std::error::Error + Send + Sync>>
         },
         None,
     )?;
-
+    
     let in_sight_response: InSight = serde_json::from_str(&resp)?;
+
     let earliest_valid_sol_date = in_sight_response
         .earliest_valid_sol_date()
         .expect("Failed to obtain earliest valid Sol date");
@@ -69,6 +81,7 @@ fn fetch_and_store() -> Result<String, Box<dyn std::error::Error + Send + Sync>>
     Ok(earliest_valid_sol_date)
 }
 
+#[cfg(feature = "lambda")]
 fn handler(_: Value, _: Context) -> Result<Outcome, HandlerError> {
     match fetch_and_store() {
         Ok(earliest_valid_sol_date) => Ok(Outcome {
@@ -81,8 +94,17 @@ fn handler(_: Value, _: Context) -> Result<Outcome, HandlerError> {
     }
 }
 
+
 fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    simple_logger::init_with_level(log::Level::Info)?;
+    simple_logger::SimpleLogger::new()
+        .with_level(log::LevelFilter::Info)
+        .init()?;
+    
+    #[cfg(feature = "lambda")]
     lambda!(handler);
+
+    #[cfg(not(feature = "lambda"))]
+    fetch_and_store()?;
+
     Ok(())
 }

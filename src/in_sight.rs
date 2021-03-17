@@ -129,13 +129,13 @@ struct InSightValidityChecks {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct InSightSolValidation {
-    #[serde(rename(deserialize = "AT"))]
+    #[serde(rename(deserialize = "AT"), default = "InSightSolValidationKind::default")]
     temperature: InSightTemperatureValidation,
-    #[serde(rename(deserialize = "WD"))]
+    #[serde(rename(deserialize = "WD"), default = "InSightSolValidationKind::default")]
     wind_direction: InSightWindDirectionValidation,
-    #[serde(rename(deserialize = "PRE"))]
+    #[serde(rename(deserialize = "PRE"), default = "InSightSolValidationKind::default")]
     pressure: InSightPressureValidation,
-    #[serde(rename(deserialize = "HWS"))]
+    #[serde(rename(deserialize = "HWS"), default = "InSightSolValidationKind::default")]
     horizontal_wind_speed: InSightWindSpeedValidation,
 }
 
@@ -154,6 +154,14 @@ struct InSightSolValidationKind {
     valid: bool,
 }
 
+impl Default for InSightSolValidationKind {
+    fn default() -> Self {
+        InSightSolValidationKind {
+            sol_hours_with_data: Vec::new(),
+            valid: false,
+        }
+    }
+}
 // Same structure, different kinds;
 type InSightTemperatureValidation = InSightSolValidationKind;
 type InSightWindSpeedValidation = InSightSolValidationKind;
