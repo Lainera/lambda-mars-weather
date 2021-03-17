@@ -23,3 +23,6 @@ Using NASA's InSight API for collecting daily weather updates from Mars. API doc
 - Was curious about non-standard lambda environments
 - Wanted to check out Rust new mongo driver
 
+## Docker
+
+Unless `lambda` feature is enabled code does not use any of the lambda-specific functionality. Instead compiled binary is ran in a container on a cron job. 

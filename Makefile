@@ -1,3 +1,7 @@
+TAG="lambda-mars-weather"
+
+.PHONY: lambda, lambda-run, image
+
 lambda:
 	docker run --rm \
 		-v ${PWD}:/code \
@@ -10,3 +14,6 @@ lambda-run:
 		--rm -v /tmp/lambda:/var/task:ro \
 		--network $(MONGO_NETWORK) \
 		lambci/lambda@sha256:bfc36a6b45e993d236a98e510083d55df1dc1634822c6cd1aef97526997a3b34 '{"key":"value"}'
+
+image:
+	docker build . -t "$(TAG)"
