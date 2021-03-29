@@ -4,7 +4,7 @@ printenv | grep MONGODB_URI >> /etc/environment
 
 cat<<EOF > /etc/cron.d/crontab
 MAILTO=""
-* */12 * * * /bootstrap >> /var/log/lambda.log 2>&1
+*/10 * * * * /bootstrap >> /var/log/lambda.log 2>&1
 
 EOF
 
