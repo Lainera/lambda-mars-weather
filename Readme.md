@@ -25,4 +25,13 @@ Using NASA's InSight API for collecting daily weather updates from Mars. API doc
 
 ## Docker
 
-Unless `lambda` feature is enabled code does not use any of the lambda-specific functionality. Instead compiled binary is ran in a container on a cron job. 
+Unless `lambda` feature is enabled code does not use any of the lambda-specific functionality. Instead compiled binary is ran in a container on a cron job.
+Repo includes two Dockerfiles: one for x86_64 and one for arm64 architectures, to build both run:
+```sh
+make TAG=my-special-repo/lambda-mars manifest
+```
+
+This is going to leverage debian:buster-slim base image and docker buildx functionality, to:
+- build & tag `my-special-repo/lambda-mars:armv8` image
+- build & tag `my-special-repo/lambda-mars:amd64` image
+- create & push manifest file `my-special-repo/lambda-mars:latest`
